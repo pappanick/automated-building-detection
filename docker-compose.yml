@@ -1,0 +1,9 @@
+version: "3.8"
+services:
+  abd:
+    image: rodekruis/automated-building-detection:latest
+    platform: linux/amd64
+    ports:
+      - "5001:5000"
+    volumes:
+      - ./input:/workdir

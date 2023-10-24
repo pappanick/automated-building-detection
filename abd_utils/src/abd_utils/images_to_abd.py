@@ -26,17 +26,18 @@ def main(images, output):
             # save as tiff
             im = Image.open(os.path.join(images, file))
             im_resized = im.resize((512, 512))
-            im_resized.save(os.path.join(output, 'images', zoom, x, y + '.tiff'))
+            im_resized.save(os.path.join(
+                output, 'images', zoom, x, y + '.tiff'))
         # add to cover
-        cover = cover.append(pd.Series({'x': x,
-                                        'y': y,
-                                        'z': zoom}), ignore_index=True)
+        cover = pd.concat([cover, pd.Series({'x': x,
+                                             'y': y,
+                                             'z': zoom})], ignore_index=True)
         if num % 1000 == 0:
-            cover.to_csv(os.path.join(output, 'cover.csv'), header=False, index=False)
+            cover.to_csv(os.path.join(output, 'cover.csv'),
+                         header=False, index=False)
     # save cover
     cover.to_csv(os.path.join(output, 'cover.csv'), header=False, index=False)
 
 
 if __name__ == '__main__':
     main()
-

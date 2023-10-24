@@ -19,17 +19,25 @@ from abd_model.tools.dataset import compute_classes_weights
 
 
 def add_parser(subparser, formatter_class):
-    parser = subparser.add_parser("train", help="Trains a model on a dataset", formatter_class=formatter_class)
-    parser.add_argument("--config", type=str, help="path to config file [required, if no global config setting]")
+    parser = subparser.add_parser(
+        "train", help="Trains a model on a dataset", formatter_class=formatter_class)
+    parser.add_argument(
+        "--config", type=str, help="path to config file [required, if no global config setting]")
 
     data = parser.add_argument_group("Dataset")
-    data.add_argument("--dataset", type=str, required=True, help="train dataset path [required]")
-    data.add_argument("--cover", type=str, help="path to csv tiles cover file, to filter tiles dataset on [optional]")
-    data.add_argument("--classes_weights", type=str, help="classes weights separated with comma or 'auto' [optional]")
-    data.add_argument("--tiles_weights", type=str, help="path to csv tiles cover file, to apply weights on [optional]")
-    data.add_argument("--loader", type=str, help="dataset loader name [if set override config file value]")
+    data.add_argument("--dataset", type=str, required=True,
+                      help="train dataset path [required]")
+    data.add_argument("--cover", type=str,
+                      help="path to csv tiles cover file, to filter tiles dataset on [optional]")
+    data.add_argument("--classes_weights", type=str,
+                      help="classes weights separated with comma or 'auto' [optional]")
+    data.add_argument("--tiles_weights", type=str,
+                      help="path to csv tiles cover file, to apply weights on [optional]")
+    data.add_argument("--loader", type=str,
+                      help="dataset loader name [if set override config file value]")
 
-    hp = parser.add_argument_group("Hyper Parameters [if set override config file value]")
+    hp = parser.add_argument_group(
+        "Hyper Parameters [if set override config file value]")
     hp.add_argument("--bs", type=int, help="batch size")
     hp.add_argument("--lr", type=float, help="learning rate")
     hp.add_argument("--ts", type=str, help="tile size")
@@ -40,13 +48,18 @@ def add_parser(subparser, formatter_class):
 
     mt = parser.add_argument_group("Training")
     mt.add_argument("--epochs", type=int, help="number of epochs to train")
-    mt.add_argument("--resume", action="store_true", help="resume model training, if set imply to provide a checkpoint")
-    mt.add_argument("--checkpoint", type=str, help="path to a model checkpoint. To fine tune or resume a training")
-    mt.add_argument("--workers", type=int, help="number of pre-processing images workers, per GPU [default: batch size]")
+    mt.add_argument("--resume", action="store_true",
+                    help="resume model training, if set imply to provide a checkpoint")
+    mt.add_argument("--checkpoint", type=str,
+                    help="path to a model checkpoint. To fine tune or resume a training")
+    mt.add_argument("--workers", type=int,
+                    help="number of pre-processing images workers, per GPU [default: batch size]")
 
     out = parser.add_argument_group("Output")
-    out.add_argument("--saving", type=int, default=1, help="number of epochs beetwen checkpoint saving [default: 1]")
-    out.add_argument("--out", type=str, required=True, help="output directory path to save checkpoint and logs [required]")
+    out.add_argument("--saving", type=int, default=1,
+                     help="number of epochs beetwen checkpoint saving [default: 1]")
+    out.add_argument("--out", type=str, required=True,
+                     help="output directory path to save checkpoint and logs [required]")
 
     parser.set_defaults(func=main)
 
@@ -54,23 +67,28 @@ def add_parser(subparser, formatter_class):
 def main(args):
     config = load_config(args.config)
     args.out = os.path.expanduser(args.out)
-    args.cover = [tile for tile in tiles_from_csv(os.path.expanduser(args.cover))] if args.cover else None
+    args.cover = [tile for tile in tiles_from_csv(
+        os.path.expanduser(args.cover))] if args.cover else None
     if args.classes_weights:
         try:
-            args.classes_weights = list(map(float, args.classes_weights.split(",")))
+            args.classes_weights = list(
+                map(float, args.classes_weights.split(",")))
         except:
             assert args.classes_weights == "auto", "invalid --classes_weights value"
     else:
-        args.classes_weights = [classe["weight"] for classe in config["classes"]]
+        args.classes_weights = [classe["weight"]
+                                for classe in config["classes"]]
 
     args.tiles_weights = (
-        [(tile, weight) for tile, weight in tiles_from_csv(os.path.expanduser(args.tiles_weights), extra_columns=True)]
+        [(tile, weight) for tile, weight in tiles_from_csv(
+            os.path.expanduser(args.tiles_weights), extra_columns=True)]
         if args.tiles_weights
         else None
     )
 
     config["model"]["loader"] = args.loader if args.loader else config["model"]["loader"]
-    config["model"]["ts"] = tuple(map(int, args.ts.split(","))) if args.ts else config["model"]["ts"]
+    config["model"]["ts"] = tuple(
+        map(int, args.ts.split(","))) if args.ts else config["model"]["ts"]
     config["model"]["nn"] = args.nn if args.nn else config["model"]["nn"]
     config["model"]["encoder"] = args.encoder if args.encoder else config["model"]["encoder"]
     config["train"]["bs"] = args.bs if args.bs else config["train"]["bs"]
@@ -83,17 +101,23 @@ def main(args):
 
     log = Logs(os.path.join(args.out, "log"))
 
-    assert torch.cuda.is_available(), "No GPU support found. Check CUDA and NVidia Driver install."
-    assert torch.distributed.is_nccl_available(), "No NCCL support found. Check your PyTorch install."
+    # assert torch.cuda.is_available(
+    # ), "No GPU support found. Check CUDA and NVidia Driver install."
+    # assert torch.distributed.is_nccl_available(
+    # ), "No NCCL support found. Check your PyTorch install."
     world_size = torch.cuda.device_count()
+    world_size = 1  # Hard Coded since eval MultiGPUs not yet implemented
 
-    args.workers = min(config["train"]["bs"] if not args.workers else args.workers, math.floor(os.cpu_count() / world_size))
+    args.workers = min(config["train"]["bs"] if not args.workers else args.workers, math.floor(
+        os.cpu_count() / world_size))
     log.log("abd train on {} GPUs, with {} workers/GPU".format(world_size, args.workers))
     log.log("---")
 
-    loader = load_module("abd_model.loaders.{}".format(config["model"]["loader"].lower()))
+    loader = load_module("abd_model.loaders.{}".format(
+        config["model"]["loader"].lower()))
 
-    assert os.path.isdir(os.path.expanduser(args.dataset)), "--dataset path is not a directory"
+    assert os.path.isdir(os.path.expanduser(args.dataset)
+                         ), "--dataset path is not a directory"
     dataset = getattr(loader, config["model"]["loader"])(
         config, config["model"]["ts"], args.dataset, args.cover, args.tiles_weights, "train"
     )
@@ -103,18 +127,21 @@ def main(args):
     log.log("\nDataSet:        {}".format(args.dataset))
 
     if args.classes_weights == "auto":
-        args.classes_weights = compute_classes_weights(args.dataset, config["classes"], args.cover, os.cpu_count())
+        args.classes_weights = compute_classes_weights(
+            args.dataset, config["classes"], args.cover, os.cpu_count())
 
     log.log("\n--- Input tensor")
     num_channel = 1  # 1-based numerotation
     for channel in config["channels"]:
         for band in channel["bands"]:
-            log.log("Channel {}:\t\t {} - (band:{})".format(num_channel, channel["name"], band))
+            log.log(
+                "Channel {}:\t\t {} - (band:{})".format(num_channel, channel["name"], band))
             num_channel += 1
 
     log.log("\n--- Output Classes ---")
     for c, classe in enumerate(config["classes"]):
-        log.log("Class {}:\t\t {} ({:.2f})".format(c, classe["title"], args.classes_weights[c]))
+        log.log("Class {}:\t\t {} ({:.2f})".format(
+            c, classe["title"], args.classes_weights[c]))
 
     log.log("\n--- Model ---")
     for hp in config["model"]:
@@ -122,7 +149,8 @@ def main(args):
 
     lock_file = os.path.abspath(os.path.join(args.out, str(uuid.uuid1())))
     mp.spawn(
-        gpu_worker, nprocs=world_size, args=(world_size, lock_file, dataset, shape_in, shape_out, args, config),
+        gpu_worker, nprocs=world_size, args=(
+            world_size, lock_file, dataset, shape_in, shape_out, args, config),
     )
     if os.path.exists(lock_file):
         os.remove(lock_file)
@@ -132,23 +160,31 @@ def gpu_worker(rank, world_size, lock_file, dataset, shape_in, shape_out, args, 
 
     log = Logs(os.path.join(args.out, "log")) if rank == 0 else None
 
-    dist.init_process_group(backend="nccl", init_method="file://" + lock_file, world_size=world_size, rank=rank)
+    dist.init_process_group(backend="nccl", init_method="file://" +
+                            lock_file, world_size=world_size, rank=rank)
     torch.cuda.set_device(rank)
     torch.manual_seed(0)
 
     bs = config["train"]["bs"]
 
-    sampler = torch.utils.data.distributed.DistributedSampler(dataset, num_replicas=world_size, rank=rank)
-    loader = DataLoader(dataset, batch_size=bs, shuffle=False, drop_last=True, num_workers=args.workers, sampler=sampler)
+    sampler = torch.utils.data.distributed.DistributedSampler(
+        dataset, num_replicas=world_size, rank=rank)
+    loader = DataLoader(dataset, batch_size=bs, shuffle=False,
+                        drop_last=True, num_workers=args.workers, sampler=sampler)
 
-    nn_module = load_module("abd_model.nn.{}".format(config["model"]["nn"].lower()))
+    nn_module = load_module("abd_model.nn.{}".format(
+        config["model"]["nn"].lower()))
     nn = getattr(nn_module, config["model"]["nn"])(
-        shape_in, shape_out, config["model"]["encoder"].lower(), config["train"]
+        shape_in, shape_out, config["model"]["encoder"].lower(
+        ), config["train"]
     ).cuda(rank)
-    nn = DistributedDataParallel(nn, device_ids=[rank], find_unused_parameters=True)
+    nn = DistributedDataParallel(
+        nn, device_ids=[rank], find_unused_parameters=True)
 
-    optimizer_params = {key: value for key, value in config["train"]["optimizer"].items() if key != "name"}
-    optimizer = getattr(torch.optim, config["train"]["optimizer"]["name"])(nn.parameters(), **optimizer_params)
+    optimizer_params = {key: value for key,
+                        value in config["train"]["optimizer"].items() if key != "name"}
+    optimizer = getattr(torch.optim, config["train"]["optimizer"]["name"])(
+        nn.parameters(), **optimizer_params)
 
     if rank == 0:
         log.log("\n--- Train ---")
@@ -158,18 +194,21 @@ def gpu_worker(rank, world_size, lock_file, dataset, shape_in, shape_out, args, 
                 dap = config["train"]["da"]["p"]
                 log.log("{}{} ({:.2f})".format("da".ljust(25, " "), da, dap))
             elif hp == "metrics":
-                log.log("{}{}".format(hp.ljust(25, " "), set(config["train"][hp])))  # aesthetic
+                log.log("{}{}".format(hp.ljust(25, " "), set(
+                    config["train"][hp])))  # aesthetic
             elif hp != "optimizer":
                 log.log("{}{}".format(hp.ljust(25, " "), config["train"][hp]))
 
-        log.log("{}{}".format("optimizer".ljust(25, " "), config["train"]["optimizer"]["name"]))
+        log.log("{}{}".format("optimizer".ljust(25, " "),
+                config["train"]["optimizer"]["name"]))
         for k, v in optimizer.state_dict()["param_groups"][0].items():
             if k != "params":
                 log.log(" - {}{}".format(k.ljust(25 - 3, " "), v))
 
     resume = 0
     if args.checkpoint:
-        chkpt = torch.load(os.path.expanduser(args.checkpoint), map_location="cuda:{}".format(rank))
+        chkpt = torch.load(os.path.expanduser(args.checkpoint),
+                           map_location="cuda:{}".format(rank))
         assert nn.module.version == chkpt["model_version"], "Model Version mismatch"
         nn.load_state_dict(chkpt["state_dict"])
 
@@ -183,7 +222,8 @@ def gpu_worker(rank, world_size, lock_file, dataset, shape_in, shape_out, args, 
             resume = chkpt["epoch"]
             assert resume < args.epochs, "Epoch asked, already reached by the given checkpoint"
 
-    loss_module = load_module("abd_model.losses.{}".format(config["train"]["loss"].lower()))
+    loss_module = load_module("abd_model.losses.{}".format(
+        config["train"]["loss"].lower()))
     criterion = getattr(loss_module, config["train"]["loss"])().cuda(rank)
 
     for epoch in range(resume + 1, args.epochs + 1):  # 1-N based
@@ -191,8 +231,10 @@ def gpu_worker(rank, world_size, lock_file, dataset, shape_in, shape_out, args, 
         if rank == 0:
             log.log("\n---\nEpoch: {}/{}\n".format(epoch, args.epochs))
 
-        sampler.set_epoch(epoch)  # https://github.com/pytorch/pytorch/issues/31232
-        do_epoch(rank, loader, config, args.classes_weights, log, nn, criterion, epoch, optimizer)
+        # https://github.com/pytorch/pytorch/issues/31232
+        sampler.set_epoch(epoch)
+        do_epoch(rank, loader, config, args.classes_weights,
+                 log, nn, criterion, epoch, optimizer)
 
         if rank == 0:
             UUID = uuid.uuid1()
@@ -213,7 +255,8 @@ def gpu_worker(rank, world_size, lock_file, dataset, shape_in, shape_out, args, 
                 "optimizer": optimizer.state_dict(),
                 "loader": config["model"]["loader"],
             }
-            checkpoint_path = os.path.join(args.out, "checkpoint-{:05d}.pth".format(epoch))
+            checkpoint_path = os.path.join(
+                args.out, "checkpoint-{:05d}.pth".format(epoch))
             if epoch == args.epochs or not (epoch % args.saving):
                 log.log("\n--- Saving Checkpoint ---")
                 log.log("Path:\t\t {}".format(checkpoint_path))
@@ -230,7 +273,8 @@ def do_epoch(rank, loader, config, classes_weights, log, nn, criterion, epoch, o
     running_loss = 0.0
 
     assert len(loader), "Empty or Inconsistent DataSet"
-    dataloader = tqdm(loader, desc="Train", unit="Batch/GPU", ascii=True) if rank == 0 else loader
+    dataloader = tqdm(loader, desc="Train", unit="Batch/GPU",
+                      ascii=True) if rank == 0 else loader
 
     for images, masks, tiles, tiles_weights in dataloader:
         images = images.cuda(rank, non_blocking=True)
@@ -240,7 +284,8 @@ def do_epoch(rank, loader, config, classes_weights, log, nn, criterion, epoch, o
 
         # Forward
         outputs = nn(images)
-        loss = criterion(outputs, masks, classes_weights, tiles_weights, config)
+        loss = criterion(outputs, masks, classes_weights,
+                         tiles_weights, config)
         running_loss += loss.item()
 
         # Backward
@@ -250,4 +295,5 @@ def do_epoch(rank, loader, config, classes_weights, log, nn, criterion, epoch, o
 
     assert num_samples > 0, "DataSet inconsistencies"
     if rank == 0:
-        log.log("{}{:.3f}".format("Loss:".ljust(25, " "), running_loss / num_samples))
+        log.log("{}{:.3f}".format("Loss:".ljust(
+            25, " "), running_loss / num_samples))
