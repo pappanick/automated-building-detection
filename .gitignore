@@ -1,7 +1,7 @@
 # ds dev stuff
 data/
 notebooks_dev/
-
+abd_utils/src/abd_utils/.env
 # Byte-compiled / optimized / DLL files
 __pycache__/
 **/data/
