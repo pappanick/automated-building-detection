@@ -57,10 +57,15 @@ def add_parser(subparser, formatter_class):
 
 def gpu_worker(rank, world_size, lock_file, args, config, dataset, palette, transparency):
 
-    dist.init_process_group(backend="nccl", init_method="file://" +
+    # dist.init_process_group(backend="nccl", init_method="file://" +
+    #                         lock_file, world_size=world_size, rank=rank)
+    # torch.init_process_group(backend="mps", init_method="file://" +
+    #                          lock_file, world_size=world_size, rank=rank)
+    dist.init_process_group(backend="gloo", init_method="file://" +
                             lock_file, world_size=world_size, rank=rank)
     # torch.cuda.set_device(rank)
     rank = torch.device("mps")
+    # rank = torch.device("cpu")
     chkpt = torch.load(args.checkpoint, map_location=torch.device(rank))
     nn_module = load_module("abd_model.nn.{}".format(chkpt["nn"].lower()))
     nn = getattr(nn_module, chkpt["nn"])(
@@ -144,6 +149,7 @@ def main(args):
     args.out = os.path.expanduser(args.out)
     log = Logs(os.path.join(args.out, "log"))
 
+    chkpt = torch.load(args.checkpoint, map_location=torch.device("mps"))
     chkpt = torch.load(args.checkpoint, map_location=torch.device("cpu"))
     log.log("abd predict on {} GPUs, with {} workers/GPU and {} tiles/batch".format(
         world_size, args.workers, args.bs))

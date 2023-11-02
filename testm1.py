@@ -3,5 +3,5 @@ import math
 
 print(torch.backends.mps.is_available())  # the MacOS is higher than 12.3+
 print(torch.backends.mps.is_built())  # MPS is activated
-device = torch.device_count("mps")
-print(device)
+# device = torch.device_count("mps")
+# print(device)

@@ -85,7 +85,7 @@ def main(args):
     ), "the MacOS is lower than 12.3"  # the MacOS is higher than 12.3+
     assert torch.backends.mps.is_built(
     ), "MPS is not activated."  # MPS is activated
-    world_size = 1  # Hard Coded since eval MultiGPUs not yet implemented
+    world_size = 8  # Hard Coded since eval MultiGPUs not yet implemented
     args.workers = min(args.bs if not args.workers else args.workers,
                        math.floor(os.cpu_count() / world_size))
 
@@ -130,7 +130,11 @@ def main(args):
 
 def gpu_worker(rank, world_size, lock_file, dataset, shape_in, shape_out, args, config):
 
-    dist.init_process_group(backend="nccl", init_method="file://" +
+    # dist.init_process_group(backend="nccl", init_method="file://" +
+    #                         lock_file, world_size=world_size, rank=rank)
+    # dist.init_process_group(backend="mps", init_method="file://" +
+    #                          lock_file, world_size=world_size, rank=rank)
+    dist.init_process_group(backend="gloo", init_method="file://" +
                             lock_file, world_size=world_size, rank=rank)
     torch.cuda.set_device(rank)
     torch.manual_seed(0)

@@ -160,8 +160,12 @@ def gpu_worker(rank, world_size, lock_file, dataset, shape_in, shape_out, args, 
 
     log = Logs(os.path.join(args.out, "log")) if rank == 0 else None
 
-    dist.init_process_group(backend="nccl", init_method="file://" +
+    # dist.init_process_group(backend="nccl", init_method="file://" +
+    #                         lock_file, world_size=world_size, rank=rank)
+    dist.init_process_group(backend="gloo", init_method="file://" +
                             lock_file, world_size=world_size, rank=rank)
+    # dist.init_process_group(backend="mps", init_method="file://" +
+    #                         lock_file, world_size=world_size, rank=rank)
     torch.cuda.set_device(rank)
     torch.manual_seed(0)
 

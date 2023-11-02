@@ -1,7 +1,16 @@
+# Data
+abd-input
+abd-input1
+bing-images
+bing-images1
+input/
+
 # ds dev stuff
 data/
 notebooks_dev/
+.env
 abd_utils/src/abd_utils/.env
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 **/data/

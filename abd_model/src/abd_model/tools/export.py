@@ -10,33 +10,45 @@ from abd_model.core import load_module
 
 
 def add_parser(subparser, formatter_class):
-    parser = subparser.add_parser("export", help="Export a model to ONNX or Torch JIT", formatter_class=formatter_class)
+    parser = subparser.add_parser(
+        "export", help="Export a model to ONNX or Torch JIT", formatter_class=formatter_class)
 
     inp = parser.add_argument_group("Inputs")
-    inp.add_argument("--checkpoint", type=str, required=True, help="model checkpoint to load [required]")
-    inp.add_argument("--type", type=str, choices=["onnx", "jit", "pth"], default="onnx", help="output type [default: onnx]")
+    inp.add_argument("--checkpoint", type=str, required=True,
+                     help="model checkpoint to load [required]")
+    inp.add_argument("--type", type=str, choices=[
+                     "onnx", "jit", "pth"], default="onnx", help="output type [default: onnx]")
 
-    pth = parser.add_argument_group("To set or override metadata pth parameters:")
+    pth = parser.add_argument_group(
+        "To set or override metadata pth parameters:")
     pth.add_argument("--nn", type=str, help="nn name")
     pth.add_argument("--loader", type=str, help="nn loader")
-    pth.add_argument("--doc_string", type=str, help="nn documentation abstract")
-    pth.add_argument("--shape_in", type=str, help="nn shape in (e.g 3,512,512)")
-    pth.add_argument("--shape_out", type=str, help="nn shape_out  (e.g 2,512,512)")
+    pth.add_argument("--doc_string", type=str,
+                     help="nn documentation abstract")
+    pth.add_argument("--shape_in", type=str,
+                     help="nn shape in (e.g 3,512,512)")
+    pth.add_argument("--shape_out", type=str,
+                     help="nn shape_out  (e.g 2,512,512)")
     pth.add_argument("--encoder", type=str, help="nn encoder  (e.g resnet50)")
 
     out = parser.add_argument_group("Output")
-    out.add_argument("--out", type=str, required=True, help="path to save export model to [required]")
+    out.add_argument("--out", type=str, required=True,
+                     help="path to save export model to [required]")
 
     parser.set_defaults(func=main)
 
 
 def main(args):
 
-    chkpt = torch.load(os.path.expanduser(args.checkpoint), map_location=torch.device("cpu"))
+    # chkpt = torch.load(os.path.expanduser(args.checkpoint),
+    #                    map_location=torch.device("cpu"))
+    chkpt = torch.load(os.path.expanduser(args.checkpoint),
+                       map_location=torch.device("mps"))
     assert chkpt, "Unable to load checkpoint {}".format(args.checkpoint)
 
     if os.path.dirname(os.path.expanduser(args.out)):
-        os.makedirs(os.path.dirname(os.path.expanduser(args.out)), exist_ok=True)
+        os.makedirs(os.path.dirname(
+            os.path.expanduser(args.out)), exist_ok=True)
     args.out = os.path.expanduser(args.out)
 
     UUID = chkpt["uuid"] if "uuid" in chkpt else uuid.uuid1()
@@ -78,7 +90,8 @@ def main(args):
         shape_out = tuple(map(int, args.shape_out.split(",")))
 
     nn_module = load_module("abd_model.nn.{}".format(nn_name.lower()))
-    nn = getattr(nn_module, nn_name)(shape_in, shape_out, encoder.lower()).to("cpu")
+    nn = getattr(nn_module, nn_name)(
+        shape_in, shape_out, encoder.lower()).to("cpu")
 
     print("abd export model to {}".format(args.type), file=sys.stderr)
     print("Model: {}".format(nn_name, file=sys.stderr))
@@ -124,7 +137,8 @@ def main(args):
                 args.out,
                 input_names=["input", "shape_in", "shape_out"],
                 output_names=["output"],
-                dynamic_axes={"input": {0: "num_batch"}, "output": {0: "num_batch"}},
+                dynamic_axes={"input": {0: "num_batch"},
+                              "output": {0: "num_batch"}},
             )
 
         if args.type == "jit":

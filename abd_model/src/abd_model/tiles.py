@@ -19,7 +19,8 @@ import rasterio
 import mercantile
 import supermercado
 
-warnings.simplefilter("ignore", UserWarning)  # To prevent rasterio NotGeoreferencedWarning
+# To prevent rasterio NotGeoreferencedWarning
+warnings.simplefilter("ignore", UserWarning)
 
 
 def tile_pixel_to_location(tile, dx, dy):
@@ -38,7 +39,8 @@ def tile_pixel_to_location(tile, dx, dy):
 def tiles_from_csv(path, xyz=True, extra_columns=False):
     """Retrieve tiles from a line-delimited csv file."""
 
-    assert os.path.isfile(os.path.expanduser(path)), "'{}' seems not a valid CSV file".format(path)
+    assert os.path.isfile(os.path.expanduser(
+        path)), "'{}' seems not a valid CSV file".format(path)
     with open(os.path.expanduser(path)) as fp:
 
         for row in fp:
@@ -48,14 +50,18 @@ def tiles_from_csv(path, xyz=True, extra_columns=False):
 
             row = re.split(",|\t", row)  # use either comma or tab as separator
             if xyz:
-                assert len(row) >= 3, "Invalid Cover"
+                # Original
+                assert len(row) >= 3, print(len(row)) + "1Invalid Cover"
+                # assert len(row) > 3, print(len(row)) + "1Invalid Cover"
                 if not extra_columns or len(row) == 3:
                     yield mercantile.Tile(int(row[0]), int(row[1]), int(row[2]))
                 else:
                     yield [mercantile.Tile(int(row[0]), int(row[1]), int(row[2])), *map(float, row[3:])]
 
             if not xyz:
-                assert len(row) >= 1, "Invalid Cover"
+                # Original
+                assert len(row) >= 1, print(len(row)) + "Invalid Cover"
+                # assert len(row) <= 1, print(len(row)) + "2Invalid Cover"
                 if not extra_columns:
                     yield row[0]
                 else:
@@ -70,10 +76,12 @@ def tiles_from_dir(root, cover=None, xyz=True, xyz_path=False):
         paths = glob.glob(os.path.join(root, "[0-9]*/[0-9]*/[0-9]*.*"))
 
         for path in paths:
-            tile_xyz = re.match(os.path.join(root, "(?P<z>[0-9]+)/(?P<x>[0-9]+)/(?P<y>[0-9]+).+"), path)
+            tile_xyz = re.match(os.path.join(
+                root, "(?P<z>[0-9]+)/(?P<x>[0-9]+)/(?P<y>[0-9]+).+"), path)
             if not tile_xyz:
                 continue
-            tile = mercantile.Tile(int(tile_xyz["x"]), int(tile_xyz["y"]), int(tile_xyz["z"]))
+            tile = mercantile.Tile(int(tile_xyz["x"]), int(
+                tile_xyz["y"]), int(tile_xyz["z"]))
 
             if cover is not None and tile not in cover:
                 continue
@@ -93,7 +101,8 @@ def tiles_from_dir(root, cover=None, xyz=True, xyz_path=False):
 def tile_from_xyz(root, x, y, z):
     """Retrieve a single tile from a slippy map dir."""
 
-    path = glob.glob(os.path.join(os.path.expanduser(root), str(z), str(x), str(y) + ".*"))
+    path = glob.glob(os.path.join(os.path.expanduser(
+        root), str(z), str(x), str(y) + ".*"))
     if not path:
         return None
 
@@ -131,15 +140,20 @@ def tiles_to_geojson(tiles, union=True):
     geojson = '{"type":"FeatureCollection","features":['
 
     if union:  # smaller tiles union geometries (but losing properties)
-        tiles = [str(tile.z) + "-" + str(tile.x) + "-" + str(tile.y) + "\n" for tile in tiles]
+        tiles = [str(tile.z) + "-" + str(tile.x) + "-" +
+                 str(tile.y) + "\n" for tile in tiles]
         for feature in supermercado.uniontiles.union(tiles, True):
-            geojson += json.dumps(feature) if first else "," + json.dumps(feature)
+            geojson += json.dumps(feature) if first else "," + \
+                json.dumps(feature)
             first = False
     else:  # keep each tile geometry and properties (but fat)
         for tile in tiles:
-            prop = '"properties":{{"x":{},"y":{},"z":{}}}'.format(tile.x, tile.y, tile.z)
-            geom = '"geometry":{}'.format(json.dumps(mercantile.feature(tile, precision=6)["geometry"]))
-            geojson += '{}{{"type":"Feature",{},{}}}'.format("," if not first else "", geom, prop)
+            prop = '"properties":{{"x":{},"y":{},"z":{}}}'.format(
+                tile.x, tile.y, tile.z)
+            geom = '"geometry":{}'.format(json.dumps(
+                mercantile.feature(tile, precision=6)["geometry"]))
+            geojson += '{}{{"type":"Feature",{},{}}}'.format(
+                "," if not first else "", geom, prop)
             first = False
 
     geojson += "]}"
@@ -154,7 +168,8 @@ def tiles_to_granules(tiles, pg):
     assert db
 
     granules = set()
-    tiles = [str(tile.z) + "-" + str(tile.x) + "-" + str(tile.y) + "\n" for tile in tiles]
+    tiles = [str(tile.z) + "-" + str(tile.x) + "-" +
+             str(tile.y) + "\n" for tile in tiles]
     for feature in supermercado.uniontiles.union(tiles, True):
         geom = json.dumps(feature["geometry"])
         query = """SELECT id FROM neo.s2_granules
@@ -183,8 +198,10 @@ def tile_image_from_file(path, bands=None, force_rgb=False):
     image = None
     for i in raster.indexes if bands is None else bands:
         data_band = raster.read(i)
-        data_band = data_band.reshape(data_band.shape[0], data_band.shape[1], 1)  # H,W -> H,W,C
-        image = np.concatenate((image, data_band), axis=2) if image is not None else data_band
+        data_band = data_band.reshape(
+            data_band.shape[0], data_band.shape[1], 1)  # H,W -> H,W,C
+        image = np.concatenate(
+            (image, data_band), axis=2) if image is not None else data_band
 
     assert image is not None, "Unable to open {}".format(path)
     return image
@@ -196,13 +213,15 @@ def tile_image_to_file(root, tile, image, ext=None):
     H, W, C = image.shape
 
     root = os.path.expanduser(root)
-    path = os.path.join(root, str(tile.z), str(tile.x)) if isinstance(tile, mercantile.Tile) else root
+    path = os.path.join(root, str(tile.z), str(tile.x)) if isinstance(
+        tile, mercantile.Tile) else root
     os.makedirs(path, exist_ok=True)
 
     if C == 1:
         ext = "png"
     elif C == 3:
-        ext = ext if ext is not None else "webp"  # allow to switch to jpeg (for old browser)
+        # allow to switch to jpeg (for old browser)
+        ext = ext if ext is not None else "webp"
     else:
         ext = "tiff"
 
@@ -237,7 +256,8 @@ def tile_label_to_file(root, tile, palette, transparency, label, append=False, m
     """ Write a label (or a mask) tile on disk. """
 
     root = os.path.expanduser(root)
-    dir_path = os.path.join(root, str(tile.z), str(tile.x)) if isinstance(tile, mercantile.Tile) else root
+    dir_path = os.path.join(root, str(tile.z), str(
+        tile.x)) if isinstance(tile, mercantile.Tile) else root
     path = os.path.join(dir_path, "{}.png".format(str(tile.y)))
 
     if len(label.shape) == 3:  # H,W,C -> H,W
@@ -280,14 +300,22 @@ def tile_is_neighboured(tile, tiles):
     tiles = dict(tiles)
     try:
         # 3x3 matrix (upper, center, bottom) x (left, center, right)
-        tiles[mercantile.Tile(x=int(tile.x) - 1, y=int(tile.y) - 1, z=int(tile.z))]  # ul
-        tiles[mercantile.Tile(x=int(tile.x) + 0, y=int(tile.y) - 1, z=int(tile.z))]  # uc
-        tiles[mercantile.Tile(x=int(tile.x) + 1, y=int(tile.y) - 1, z=int(tile.z))]  # ur
-        tiles[mercantile.Tile(x=int(tile.x) - 1, y=int(tile.y) + 0, z=int(tile.z))]  # cl
-        tiles[mercantile.Tile(x=int(tile.x) + 1, y=int(tile.y) + 0, z=int(tile.z))]  # cr
-        tiles[mercantile.Tile(x=int(tile.x) - 1, y=int(tile.y) + 1, z=int(tile.z))]  # bl
-        tiles[mercantile.Tile(x=int(tile.x) + 0, y=int(tile.y) + 1, z=int(tile.z))]  # bc
-        tiles[mercantile.Tile(x=int(tile.x) + 1, y=int(tile.y) + 1, z=int(tile.z))]  # br
+        tiles[mercantile.Tile(
+            x=int(tile.x) - 1, y=int(tile.y) - 1, z=int(tile.z))]  # ul
+        tiles[mercantile.Tile(
+            x=int(tile.x) + 0, y=int(tile.y) - 1, z=int(tile.z))]  # uc
+        tiles[mercantile.Tile(
+            x=int(tile.x) + 1, y=int(tile.y) - 1, z=int(tile.z))]  # ur
+        tiles[mercantile.Tile(
+            x=int(tile.x) - 1, y=int(tile.y) + 0, z=int(tile.z))]  # cl
+        tiles[mercantile.Tile(
+            x=int(tile.x) + 1, y=int(tile.y) + 0, z=int(tile.z))]  # cr
+        tiles[mercantile.Tile(
+            x=int(tile.x) - 1, y=int(tile.y) + 1, z=int(tile.z))]  # bl
+        tiles[mercantile.Tile(
+            x=int(tile.x) + 0, y=int(tile.y) + 1, z=int(tile.z))]  # bc
+        tiles[mercantile.Tile(
+            x=int(tile.x) + 1, y=int(tile.y) + 1, z=int(tile.z))]  # br
     except KeyError:
         return False
 
@@ -300,7 +328,8 @@ def tile_image_buffer(tile, tiles, bands):
     def tile_image_neighbour(tile, dx, dy, tiles, bands):
         """Retrieves neighbour tile image if exists."""
         try:
-            path = tiles[mercantile.Tile(x=int(tile.x) + dx, y=int(tile.y) + dy, z=int(tile.z))]
+            path = tiles[mercantile.Tile(
+                x=int(tile.x) + dx, y=int(tile.y) + dy, z=int(tile.z))]
         except KeyError:
             return None
 
