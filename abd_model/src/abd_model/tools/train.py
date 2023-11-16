@@ -11,6 +11,7 @@ import torch.multiprocessing as mp
 
 from torch.utils.data import DataLoader
 from torch.nn.parallel import DistributedDataParallel
+#from torch.nn.parallel import DataParallel
 
 import abd_model as abd
 from abd_model.core import load_config, load_module, check_model, check_channels, check_classes, Logs
@@ -160,7 +161,7 @@ def gpu_worker(rank, world_size, lock_file, dataset, shape_in, shape_out, args, 
 
     log = Logs(os.path.join(args.out, "log")) if rank == 0 else None
 
-    dist.init_process_group(backend="nccl", init_method="file://" +
+    dist.init_process_group(backend="gloo", init_method="file://" +
                             lock_file, world_size=world_size, rank=rank)
     torch.cuda.set_device(rank)
     torch.manual_seed(0)

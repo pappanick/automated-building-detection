@@ -1,4 +1,6 @@
 import geopandas as gpd
+import pandas as pd
+
 import click
 import math
 from tqdm import tqdm
@@ -33,12 +35,13 @@ def main(data, dest, crsmeters, waterbodies, area):
                 df_sj = gpd.sjoin(df_sj, df_sj, how='left', op='intersects')
                 df_sj = df_sj.reset_index().rename(columns={'index': 'index_left'})
                 num_disj = len(df_sj[df_sj['index_left'] != df_sj['index_right']])
-            gdf = gdf.append(df_sj.copy(), ignore_index=True)
+            #gdf = gdf.append(df_sj.copy(), ignore_index=True)
+            gdf = pd.concat([gdf, df_sj.copy()])
         gdf = gdf.drop(columns=['index_left', 'index_right'])
         print(f'done ({len(gdf)} entries)')
         print(f'saving intermediate')
         gdf.to_file(dest, driver='GeoJSON')
-
+    
     print('merging all')
     df_sj = gpd.sjoin(gdf, gdf, how='left', op='intersects')
     df_sj = df_sj.reset_index().rename(columns={'index': 'index_left'})

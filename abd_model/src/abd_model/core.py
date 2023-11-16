@@ -4,7 +4,7 @@ import glob
 import toml
 from importlib import import_module
 
-import re
+import regex as re
 import colorsys
 import webcolors
 from pathlib import Path

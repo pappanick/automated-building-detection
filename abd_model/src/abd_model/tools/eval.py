@@ -77,14 +77,14 @@ def main(args):
     check_channels(config)
     check_model(config)
 
-    # assert torch.cuda.is_available(
-    # ), "No GPU support found. Check CUDA and NVidia Driver install."
+    assert torch.cuda.is_available(
+    ), "No GPU support found. Check CUDA and NVidia Driver install."
     # assert torch.distributed.is_nccl_available(
     # ), "No NCCL support found. Check your PyTorch install."
-    assert torch.backends.mps.is_available(
-    ), "the MacOS is lower than 12.3"  # the MacOS is higher than 12.3+
-    assert torch.backends.mps.is_built(
-    ), "MPS is not activated."  # MPS is activated
+    # assert torch.backends.mps.is_available(
+    # ), "the MacOS is lower than 12.3"  # the MacOS is higher than 12.3+
+    # assert torch.backends.mps.is_built(
+    # ), "MPS is not activated."  # MPS is activated
     world_size = 1  # Hard Coded since eval MultiGPUs not yet implemented
     args.workers = min(args.bs if not args.workers else args.workers,
                        math.floor(os.cpu_count() / world_size))
@@ -130,9 +130,9 @@ def main(args):
 
 def gpu_worker(rank, world_size, lock_file, dataset, shape_in, shape_out, args, config):
 
-    dist.init_process_group(backend="nccl", init_method="file://" +
+    dist.init_process_group(backend="gloo", init_method="file://" +
                             lock_file, world_size=world_size, rank=rank)
-    torch.cuda.set_device(rank)
+    torch.cuda.set_device("rank")
     torch.manual_seed(0)
 
     loader = DataLoader(dataset, batch_size=args.bs,

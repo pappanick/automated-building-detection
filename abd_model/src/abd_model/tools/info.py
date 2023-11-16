@@ -1,9 +1,9 @@
 import os
-import re
+import regex as re
 import sys
 import cv2
 import torch
-import requests
+import regex as requests
 import rasterio
 import abd_model as abd
 

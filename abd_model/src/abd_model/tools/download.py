@@ -3,7 +3,7 @@ import sys
 import time
 import concurrent.futures as futures
 
-import requests
+import regex as requests
 from tqdm import tqdm
 from mercantile import xy_bounds
 

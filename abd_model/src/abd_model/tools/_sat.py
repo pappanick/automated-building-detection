@@ -1,11 +1,11 @@
 import os
-import re
+import regex as re
 import sys
 import json
 import glob
 
 import hashlib
-import requests
+import regex as requests
 import concurrent.futures as futures
 
 from tqdm import tqdm

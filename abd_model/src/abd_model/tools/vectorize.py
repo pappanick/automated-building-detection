@@ -33,7 +33,7 @@ def main(args):
     check_classes(config)
     index = [i for i in (list(range(len(config["classes"])))) if config["classes"][i]["title"] == args.type]
     assert index, "Requested type {} not found among classes title in the config file.".format(args.type)
-
+    print(args)
     masks = list(tiles_from_dir(args.masks, xyz_path=True))
     assert len(masks), "empty masks directory: {}".format(args.masks)
 
@@ -52,8 +52,8 @@ def main(args):
         try:
             C, W, H = mask.shape
         except:
-            W, H = mask.shape
-        transform = rasterio.transform.from_bounds((*mercantile.bounds(tile.x, tile.y, tile.z)), W, H)
+            W, H = mask.shape 
+        transform = rasterio.transform.from_bounds(*mercantile.bounds(tile.x, tile.y, tile.z), W, H)
 
         for shape, value in rasterio.features.shapes(mask, transform=transform, mask=mask):
             geom = '"geometry":{{"type": "Polygon", "coordinates":{}}}'.format(json.dumps(shape["coordinates"]))

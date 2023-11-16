@@ -1,7 +1,7 @@
 import os
 import sys
 import argparse
-
+import traceback
 import glob
 import shutil
 from importlib import import_module
@@ -38,7 +38,7 @@ def main():
             module.add_parser(subparser, formatter_class=fc)
 
     args = parser.parse_args()
-
+    
     if "ABD_DEBUG" in os.environ and os.environ["ABD_DEBUG"] == "1":
         args.func(args)
 
@@ -46,5 +46,10 @@ def main():
 
         try:
             args.func(args)
+            
         except (Exception) as error:
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+            print(traceback.format_exc())
             sys.exit("{}ERROR: {}".format(os.linesep, error))

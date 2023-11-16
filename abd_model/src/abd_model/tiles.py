@@ -4,7 +4,7 @@
 
 import io
 import os
-import re
+import regex as re
 import glob
 import warnings
 
@@ -65,12 +65,13 @@ def tiles_from_csv(path, xyz=True, extra_columns=False):
 def tiles_from_dir(root, cover=None, xyz=True, xyz_path=False):
     """Loads files from an on-disk dir."""
     root = os.path.expanduser(root)
-
     if xyz is True:
         paths = glob.glob(os.path.join(root, "[0-9]*/[0-9]*/[0-9]*.*"))
-
         for path in paths:
-            tile_xyz = re.match(os.path.join(root, "(?P<z>[0-9]+)/(?P<x>[0-9]+)/(?P<y>[0-9]+).+"), path)
+            #tile_xyz = re.match(os.path.join(root, "(?P<z>[0-9]+)/(?P<x>[0-9]+)/(?P<y>[0-9]+).+"), path) 
+            pattern = (os.path.join(root, "(?P<z>[0-9]+)\(?P<x>[0-9]+)\(?P<y>[0-9]+).+")).replace('\\', "\\\\")
+            tile_xyz= re.match(pattern, path) #for Windows
+            print("{},{},{}".format(tile_xyz["x"],tile_xyz["y"],tile_xyz["z"]))
             if not tile_xyz:
                 continue
             tile = mercantile.Tile(int(tile_xyz["x"]), int(tile_xyz["y"]), int(tile_xyz["z"]))

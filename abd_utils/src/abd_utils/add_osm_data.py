@@ -4,7 +4,7 @@ api = overpy.Overpass()
 import geopandas as gpd
 from shapely.geometry import Polygon
 import click
-import re
+import regex as re
 from tqdm import tqdm
 
 

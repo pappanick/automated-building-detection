@@ -10,7 +10,7 @@ import mercantile
 
 from rasterio import open as rasterio_open
 from rasterio.vrt import WarpedVRT
-from rasterio.enums import Resampling
+from rasterio.enums import regex as resampling
 from rasterio.warp import transform_bounds
 from rasterio.transform import from_bounds
 

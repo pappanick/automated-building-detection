@@ -11,6 +11,7 @@ import torch.distributed as dist
 import torch.multiprocessing as mp
 from torch.utils.data import DataLoader
 from torch.nn.parallel import DistributedDataParallel
+#from torch.nn.parallel import DataParallel
 
 from abd_model.core import load_config, load_module, check_classes, check_channels, make_palette, web_ui, Logs
 from abd_model.tiles import tile_label_to_file, tiles_from_csv
@@ -57,11 +58,11 @@ def add_parser(subparser, formatter_class):
 
 def gpu_worker(rank, world_size, lock_file, args, config, dataset, palette, transparency):
 
-    dist.init_process_group(backend="nccl", init_method="file://" +
+    dist.init_process_group(backend="gloo", init_method="file://" +
                             lock_file, world_size=world_size, rank=rank)
-    # torch.cuda.set_device(rank)
-    rank = torch.device("mps")
-    chkpt = torch.load(args.checkpoint, map_location=torch.device(rank))
+
+    torch.cuda.set_device(rank)
+    chkpt = torch.load(args.checkpoint, map_location=torch.device("cpu"))
     nn_module = load_module("abd_model.nn.{}".format(chkpt["nn"].lower()))
     nn = getattr(nn_module, chkpt["nn"])(
         chkpt["shape_in"], chkpt["shape_out"], chkpt["encoder"].lower()).to(rank)
@@ -96,7 +97,7 @@ def gpu_worker(rank, world_size, lock_file, args, config, dataset, palette, tran
                 ts = int(W)
 
                 # fmt:off
-                probs = np.zeros((N, C, W, H), dtype=np.float)
+                probs = np.zeros((N, C, W, H), dtype=float)
                 probs[:, :, 0:hs, 0:hs] = nn(images[:, :, 0:ts, 0:ts].to(rank)).data.cpu().numpy()[:, :, qs:-qs, qs:-qs]
                 probs[:, :, 0:hs,  hs:] = nn(images[:, :, 0:ts,  hs:].to(rank)).data.cpu().numpy()[:, :, qs:-qs, qs:-qs]
                 probs[:, :, hs:,  0:hs] = nn(images[:, :, hs:,  0:ts].to(rank)).data.cpu().numpy()[:, :, qs:-qs, qs:-qs]
@@ -121,14 +122,14 @@ def main(args):
     check_channels(config)
     check_classes(config)
 
-    # assert torch.cuda.is_available(
-    # ), "No GPU support found. Check CUDA and NVidia Driver install."
+    assert torch.cuda.is_available(
+    ), "No GPU support found. Check CUDA and NVidia Driver install."
     # assert torch.distributed.is_nccl_available(
     # ), "No NCCL support found. Check your PyTorch install."
-    assert torch.backends.mps.is_available(
-    ), "the MacOS is lower than 12.3"  # the MacOS is higher than 12.3+
-    assert torch.backends.mps.is_built(
-    ), "MPS is not activated."  # MPS is activated
+    #assert torch.backends.mps.is_available(
+    #), "the MacOS is lower than 12.3"  # the MacOS is higher than 12.3+
+    #assert torch.backends.mps.is_built(
+    #), "MPS is not activated."  # MPS is activated
 
     world_size = torch.cuda.device_count()
     world_size = 1  # Hard Coded since eval MultiGPUs not yet implemented
@@ -151,9 +152,8 @@ def main(args):
     log.log("---")
     loader = load_module(
         "abd_model.loaders.{}".format(chkpt["loader"].lower()))
-
     lock_file = os.path.abspath(os.path.join(args.out, str(uuid.uuid1())))
-
+    
     dataset = getattr(loader, chkpt["loader"])(
         config,
         chkpt["shape_in"][1:3],
@@ -163,7 +163,7 @@ def main(args):
         metatiles=args.metatiles,
         keep_borders=args.keep_borders,
     )
-
+    log.log("---")
     mp.spawn(gpu_worker, nprocs=world_size, args=(
         world_size, lock_file, args, config, dataset, palette, transparency))
 
